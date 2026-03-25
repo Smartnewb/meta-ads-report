@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>썸타임 Meta Ads 성과 리포트</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e4e4e7;
+    --muted: #9ca3af;
+    --accent: #818cf8;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --blue: #60a5fa;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+  
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 24px 40px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+  .header .period { color: var(--muted); font-size: 1rem; }
+  .header .generated { color: #6b7280; font-size: 0.8rem; margin-top: 12px; }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .kpi-card .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-card .value { font-size: 1.8rem; font-weight: 700; margin: 4px 0; }
+  .kpi-card .sub { font-size: 0.75rem; color: var(--muted); }
+  .kpi-card.good .value { color: var(--green); }
+  .kpi-card.warn .value { color: var(--yellow); }
+  .kpi-card.bad .value { color: var(--red); }
+
+  /* Sections */
+  .section { margin: 48px 0; }
+  .section h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section h2 .icon { font-size: 1.1rem; }
+  .section .desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead { background: #1e2030; }
+  th { padding: 12px 14px; text-align: left; font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  td { padding: 10px 14px; border-top: 1px solid var(--border); white-space: nowrap; }
+  tr:hover { background: rgba(129, 140, 248, 0.05); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .good-text { color: var(--green); font-weight: 600; }
+  .bad-text { color: var(--red); font-weight: 600; }
+  .warn-text { color: var(--yellow); font-weight: 600; }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .tag-kill { background: rgba(248,113,113,0.15); color: var(--red); }
+  .tag-cut { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .tag-boost { background: rgba(52,211,153,0.15); color: var(--green); }
+  .tag-ok { background: rgba(96,165,250,0.15); color: var(--blue); }
+
+  /* Charts */
+  .chart-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Alert boxes */
+  .alert {
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    border-left: 4px solid;
+  }
+  .alert-red { background: rgba(248,113,113,0.08); border-color: var(--red); }
+  .alert-yellow { background: rgba(251,191,36,0.08); border-color: var(--yellow); }
+  .alert-green { background: rgba(52,211,153,0.08); border-color: var(--green); }
+  .alert h3 { font-size: 0.95rem; margin-bottom: 8px; }
+  .alert ul { padding-left: 20px; color: var(--muted); font-size: 0.85rem; }
+  .alert li { margin: 4px 0; }
+
+  /* Action plan */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .action-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .action-card h3 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .action-card ul { list-style: none; padding: 0; }
+  .action-card li { padding: 6px 0; font-size: 0.85rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .action-card li:last-child { border: none; }
+  .action-card li::before { margin-right: 8px; }
+
+  .summary-box {
+    background: linear-gradient(135deg, rgba(129,140,248,0.1), rgba(52,211,153,0.05));
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px 0;
+    font-size: 0.95rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>☤ 썸타임 Meta Ads 성과 리포트</h1>
+  <div class="period">2025.12.25 — 2026.03.24 (90일)</div>
+  <div class="generated">Generated on 2026.03.25</div>
+</div>
+
+<div class="container">
+
+  <!-- Executive Summary -->
+  <div class="summary-box">
+    3개월간 <strong>1,479만원</strong> 집행, <strong>114만명</strong> 도달, CTR <strong>3.9%</strong>로 업계 평균 대비 양호.<br>
+    그러나 <strong>캠페인 간 효율 편차가 CPC 기준 최대 260배</strong>(35원 vs 9,135원)이며, 비효율 캠페인에 예산이 과다 배정되어 있음.<br>
+    앱 설치 추적이 0건 — <strong>전환 최적화가 전혀 작동하지 않는 구조</strong>.
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">총 지출</div>
+      <div class="value">1,479만</div>
+      <div class="sub">₩14,786,788</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">도달</div>
+      <div class="value">114만</div>
+      <div class="sub">1,141,790명</div>
+    </div>
+    <div class="kpi-card good">
+      <div class="label">CTR</div>
+      <div class="value">3.90%</div>
+      <div class="sub">업계 평균 1~2%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">CPC</div>
+      <div class="value">₩114</div>
+      <div class="sub">클릭당 비용</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">CPM</div>
+      <div class="value">₩4,452</div>
+      <div class="sub">1,000노출당</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">링크 클릭</div>
+      <div class="value">113,831</div>
+      <div class="sub">클릭당 ₩130</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">영상 조회</div>
+      <div class="value">472,461</div>
+      <div class="sub">조회당 ₩31</div>
+    </div>
+    <div class="kpi-card bad">
+      <div class="label">앱 설치</div>
+      <div class="value">0</div>
+      <div class="sub">추적 미연동</div>
+    </div>
+  </div>
+
+  <!-- Campaign Performance -->
+  <div class="section">
+    <h2><span class="icon">◆</span> 캠페인별 성과 비교</h2>
+    <p class="desc">19개 캠페인 중 상위/하위를 효율 기준으로 정렬</p>
+    
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>캠페인</th>
+            <th class="num">지출</th>
+            <th class="num">노출</th>
+            <th class="num">도달</th>
+            <th class="num">클릭</th>
+            <th class="num">CTR</th>
+            <th class="num">CPC</th>
+            <th class="num">링크클릭당</th>
+            <th>판정</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>썸타임 문화+로고</td>
+            <td class="num">₩600,000</td>
+            <td class="num">256,645</td>
+            <td class="num">145,707</td>
+            <td class="num">17,047</td>
+            <td class="num good-text">6.64%</td>
+            <td class="num good-text">₩35</td>
+            <td class="num good-text">₩36</td>
+            <td><span class="tag tag-boost">★ 확대</span></td>
+          </tr>
+          <tr>
+            <td>연말 커플</td>
+            <td class="num">₩881,134</td>
+            <td class="num">380,866</td>
+            <td class="num">202,398</td>
+            <td class="num">22,815</td>
+            <td class="num good-text">5.99%</td>
+            <td class="num good-text">₩39</td>
+            <td class="num good-text">₩40</td>
+            <td><span class="tag tag-boost">★ 확대</span></td>
+          </tr>
+          <tr>
+            <td>매스미디어 커플영상 (서울제외)</td>
+            <td class="num">₩2,010,692</td>
+            <td class="num">368,459</td>
+            <td class="num">185,674</td>
+            <td class="num">21,241</td>
+            <td class="num good-text">5.76%</td>
+            <td class="num">₩95</td>
+            <td class="num">₩111</td>
+            <td><span class="tag tag-ok">유지</span></td>
+          </tr>
+          <tr>
+            <td>매스미디어 커플영상</td>
+            <td class="num">₩2,467,925</td>
+            <td class="num">425,853</td>
+            <td class="num">204,100</td>
+            <td class="num">22,702</td>
+            <td class="num">5.33%</td>
+            <td class="num">₩109</td>
+            <td class="num">₩136</td>
+            <td><span class="tag tag-ok">유지</span></td>
+          </tr>
+          <tr>
+            <td>부모님</td>
+            <td class="num">₩498,169</td>
+            <td class="num">70,242</td>
+            <td class="num">44,189</td>
+            <td class="num">2,891</td>
+            <td class="num">4.12%</td>
+            <td class="num">₩172</td>
+            <td class="num warn-text">₩502</td>
+            <td><span class="tag tag-cut">검토</span></td>
+          </tr>
+          <tr>
+            <td>251221_20대</td>
+            <td class="num">₩869,721</td>
+            <td class="num">279,308</td>
+            <td class="num">149,505</td>
+            <td class="num">11,117</td>
+            <td class="num">3.98%</td>
+            <td class="num">₩78</td>
+            <td class="num">₩82</td>
+            <td><span class="tag tag-ok">유지</span></td>
+          </tr>
+          <tr>
+            <td>251213_12월말까지</td>
+            <td class="num">₩19,424</td>
+            <td class="num">6,575</td>
+            <td class="num">6,209</td>
+            <td class="num">258</td>
+            <td class="num">3.92%</td>
+            <td class="num">₩75</td>
+            <td class="num">₩76</td>
+            <td><span class="tag tag-ok">소액</span></td>
+          </tr>
+          <tr>
+            <td>산타옷</td>
+            <td class="num">₩81,299</td>
+            <td class="num">20,839</td>
+            <td class="num">17,668</td>
+            <td class="num">686</td>
+            <td class="num">3.29%</td>
+            <td class="num">₩119</td>
+            <td class="num">₩124</td>
+            <td><span class="tag tag-ok">소액</span></td>
+          </tr>
+          <tr>
+            <td>핸디X썸타임 (서울제외)</td>
+            <td class="num">₩2,052,591</td>
+            <td class="num">348,561</td>
+            <td class="num">151,584</td>
+            <td class="num">10,510</td>
+            <td class="num">3.02%</td>
+            <td class="num warn-text">₩195</td>
+            <td class="num warn-text">₩219</td>
+            <td><span class="tag tag-cut">축소</span></td>
+          </tr>
+          <tr>
+            <td>오픈지역_커뮤</td>
+            <td class="num">₩499,817</td>
+            <td class="num">153,815</td>
+            <td class="num">87,125</td>
+            <td class="num">4,379</td>
+            <td class="num">2.85%</td>
+            <td class="num">₩114</td>
+            <td class="num">₩120</td>
+            <td><span class="tag tag-ok">유지</span></td>
+          </tr>
+          <tr>
+            <td>지역기반_최초</td>
+            <td class="num">₩497,924</td>
+            <td class="num">100,113</td>
+            <td class="num">51,069</td>
+            <td class="num">2,496</td>
+            <td class="num">2.49%</td>
+            <td class="num warn-text">₩199</td>
+            <td class="num bad-text">₩375</td>
+            <td><span class="tag tag-cut">축소</span></td>
+          </tr>
+          <tr>
+            <td>핸디X썸타임</td>
+            <td class="num">₩1,917,698</td>
+            <td class="num">295,892</td>
+            <td class="num">147,836</td>
+            <td class="num">6,936</td>
+            <td class="num">2.34%</td>
+            <td class="num bad-text">₩276</td>
+            <td class="num bad-text">₩312</td>
+            <td><span class="tag tag-cut">축소</span></td>
+          </tr>
+          <tr>
+            <td>커플 찾기</td>
+            <td class="num">₩108,397</td>
+            <td class="num">19,202</td>
+            <td class="num">14,040</td>
+            <td class="num">429</td>
+            <td class="num">2.23%</td>
+            <td class="num warn-text">₩253</td>
+            <td class="num bad-text">₩406</td>
+            <td><span class="tag tag-kill">OFF</span></td>
+          </tr>
+          <tr>
+            <td>크리스마스_공식</td>
+            <td class="num">₩42,861</td>
+            <td class="num">6,542</td>
+            <td class="num">5,086</td>
+            <td class="num">127</td>
+            <td class="num">1.94%</td>
+            <td class="num bad-text">₩337</td>
+            <td class="num bad-text">₩393</td>
+            <td><span class="tag tag-kill">OFF</span></td>
+          </tr>
+          <tr>
+            <td>친구와 함께 쓰는 소개팅 문화</td>
+            <td class="num">₩400,000</td>
+            <td class="num">100,722</td>
+            <td class="num">50,315</td>
+            <td class="num">1,149</td>
+            <td class="num bad-text">1.14%</td>
+            <td class="num bad-text">₩348</td>
+            <td class="num bad-text">₩413</td>
+            <td><span class="tag tag-kill">OFF</span></td>
+          </tr>
+          <tr>
+            <td>과잠에셋</td>
+            <td class="num">₩878,492</td>
+            <td class="num">215,350</td>
+            <td class="num">104,939</td>
+            <td class="num">2,413</td>
+            <td class="num bad-text">1.12%</td>
+            <td class="num bad-text">₩364</td>
+            <td class="num bad-text">₩438</td>
+            <td><span class="tag tag-cut">축소</span></td>
+          </tr>
+          <tr>
+            <td>과잠에셋 (서울제외)</td>
+            <td class="num">₩854,559</td>
+            <td class="num">227,417</td>
+            <td class="num">122,381</td>
+            <td class="num">2,264</td>
+            <td class="num bad-text">1.00%</td>
+            <td class="num bad-text">₩377</td>
+            <td class="num bad-text">₩425</td>
+            <td><span class="tag tag-cut">축소</span></td>
+          </tr>
+          <tr>
+            <td>인지도_썰릴스</td>
+            <td class="num">₩60,433</td>
+            <td class="num">42,058</td>
+            <td class="num">33,017</td>
+            <td class="num">42</td>
+            <td class="num bad-text">0.10%</td>
+            <td class="num bad-text">₩1,439</td>
+            <td class="num bad-text">₩2,518</td>
+            <td><span class="tag tag-kill">OFF</span></td>
+          </tr>
+          <tr>
+            <td>연말 커플_경기_앱홍보</td>
+            <td class="num">₩45,675</td>
+            <td class="num">2,669</td>
+            <td class="num">591</td>
+            <td class="num">5</td>
+            <td class="num bad-text">0.19%</td>
+            <td class="num bad-text">₩9,135</td>
+            <td class="num bad-text">N/A</td>
+            <td><span class="tag tag-kill">OFF</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Weekly Trend Chart -->
+  <div class="section">
+    <h2><span class="icon">◎</span> 주간 추이</h2>
+    <p class="desc">지출 증가 시 효율 하락 패턴이 뚜렷함</p>
+    
+    <div class="chart-grid">
+      <div class="chart-container">
+        <canvas id="weeklySpendChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="weeklyCpcChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:20px">
+      <table>
+        <thead>
+          <tr><th>주간</th><th class="num">지출</th><th class="num">CTR</th><th class="num">CPC</th><th class="num">링크클릭당</th><th>비고</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>12/25~12/31</td><td class="num">₩698,035</td><td class="num">4.47%</td><td class="num">₩64</td><td class="num good-text">₩66</td><td>연말 효과</td></tr>
+          <tr><td>1/1~1/7</td><td class="num">₩554,159</td><td class="num good-text">4.77%</td><td class="num good-text">₩52</td><td class="num good-text">₩57</td><td>최저 CPC</td></tr>
+          <tr><td>1/8~1/14</td><td class="num">₩1,343,679</td><td class="num">3.50%</td><td class="num">₩110</td><td class="num warn-text">₩130</td><td>예산 급증</td></tr>
+          <tr><td>1/15~1/21</td><td class="num">₩1,033,577</td><td class="num">3.36%</td><td class="num">₩111</td><td class="num warn-text">₩129</td><td></td></tr>
+          <tr><td>1/22~1/28</td><td class="num">₩537,964</td><td class="num">4.72%</td><td class="num">₩72</td><td class="num">₩78</td><td>예산 줄이자 회복</td></tr>
+          <tr><td>1/29~2/4</td><td class="num">₩196,396</td><td class="num good-text">6.44%</td><td class="num good-text">₩39</td><td class="num good-text">₩40</td><td>★ 최고 효율</td></tr>
+          <tr><td>2/5~2/11</td><td class="num">₩302,382</td><td class="num">5.60%</td><td class="num">₩67</td><td class="num">₩73</td><td></td></tr>
+          <tr><td>2/12~2/18</td><td class="num">₩1,208,452</td><td class="num">4.26%</td><td class="num">₩129</td><td class="num warn-text">₩160</td><td>예산 재증가</td></tr>
+          <tr><td>2/19~2/25</td><td class="num">₩2,147,542</td><td class="num">3.28%</td><td class="num bad-text">₩149</td><td class="num bad-text">₩177</td><td>비용 급등</td></tr>
+          <tr><td>2/26~3/4</td><td class="num">₩2,959,853</td><td class="num bad-text">3.20%</td><td class="num bad-text">₩157</td><td class="num bad-text">₩178</td><td>최대 지출</td></tr>
+          <tr><td>3/5~3/11</td><td class="num">₩3,319,020</td><td class="num">3.77%</td><td class="num bad-text">₩152</td><td class="num bad-text">₩174</td><td>지출 정점</td></tr>
+          <tr><td>3/12~3/18</td><td class="num">₩485,729</td><td class="num good-text">6.02%</td><td class="num">₩103</td><td class="num">₩124</td><td>예산 감소 → 효율 회복</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Age/Gender -->
+  <div class="section">
+    <h2><span class="icon">▣</span> 타겟 분석 — 연령/성별</h2>
+    <p class="desc">효율 최적 구간: 25-34 남성 (CTR 4.72%, CPC ₩103)</p>
+    
+    <div class="chart-grid">
+      <div class="chart-container">
+        <canvas id="ageGenderChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="ageCpcChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:20px">
+      <table>
+        <thead>
+          <tr><th>연령</th><th>성별</th><th class="num">노출</th><th class="num">비중</th><th class="num">CTR</th><th class="num">CPC</th><th class="num">지출</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>18-24</td><td>남성</td><td class="num">1,301,140</td><td class="num">39.2%</td><td class="num">3.57%</td><td class="num good-text">₩102</td><td class="num">₩4,749,564</td></tr>
+          <tr><td>18-24</td><td>여성</td><td class="num">807,865</td><td class="num">24.3%</td><td class="num">3.42%</td><td class="num">₩134</td><td class="num">₩3,709,833</td></tr>
+          <tr><td>25-34</td><td>남성</td><td class="num">722,931</td><td class="num">21.8%</td><td class="num good-text">4.72%</td><td class="num good-text">₩103</td><td class="num">₩3,521,310</td></tr>
+          <tr><td>25-34</td><td>여성</td><td class="num">291,987</td><td class="num">8.8%</td><td class="num good-text">4.63%</td><td class="num">₩126</td><td class="num">₩1,702,912</td></tr>
+          <tr><td>35-44</td><td>남성</td><td class="num">64,918</td><td class="num">2.0%</td><td class="num">4.21%</td><td class="num">₩133</td><td class="num">₩363,265</td></tr>
+          <tr><td>35-44</td><td>여성</td><td class="num">22,178</td><td class="num">0.7%</td><td class="num">4.30%</td><td class="num">₩148</td><td class="num">₩141,551</td></tr>
+          <tr><td>45-54</td><td>남/여</td><td class="num">39,921</td><td class="num">1.2%</td><td class="num">3.5%</td><td class="num warn-text">₩150</td><td class="num">₩223,521</td></tr>
+          <tr><td>55+</td><td>남/여</td><td class="num">45,341</td><td class="num">1.4%</td><td class="num">3.4%</td><td class="num bad-text">₩164</td><td class="num">₩263,550</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Platform -->
+  <div class="section">
+    <h2><span class="icon">⚙</span> 플랫폼 분석</h2>
+    <div class="chart-container" style="max-width:400px">
+      <canvas id="platformChart"></canvas>
+    </div>
+    <div class="table-wrap" style="margin-top:20px">
+      <table>
+        <thead><tr><th>플랫폼</th><th class="num">지출</th><th class="num">비중</th><th class="num">CTR</th><th class="num">CPC</th></tr></thead>
+        <tbody>
+          <tr><td>Instagram</td><td class="num">₩14,738,873</td><td class="num good-text">99.7%</td><td class="num">3.91%</td><td class="num">₩114</td></tr>
+          <tr><td>Facebook</td><td class="num">₩47,247</td><td class="num">0.3%</td><td class="num bad-text">1.70%</td><td class="num bad-text">₩288</td></tr>
+          <tr><td>Audience Network</td><td class="num">₩668</td><td class="num">0.01%</td><td class="num bad-text">0%</td><td class="num">-</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Structural Issues -->
+  <div class="section">
+    <h2><span class="icon">⚠</span> 구조적 문제</h2>
+    
+    <div class="alert alert-red">
+      <h3>① 앱 설치 추적 0건</h3>
+      <ul>
+        <li>모든 캠페인에서 app_installs = 0. Meta SDK 연동 안 됨 또는 캠페인 목표가 트래픽/인게이지먼트</li>
+        <li>소개팅 앱에서 설치 최적화 캠페인이 없다는 건 <strong>가장 중요한 전환을 측정도, 최적화도 못하고 있다</strong>는 뜻</li>
+      </ul>
+    </div>
+
+    <div class="alert alert-yellow">
+      <h3>② 예산 분산 과다</h3>
+      <ul>
+        <li>19개 캠페인 동시 운영 — 하위 7개는 합산 30만원 미만으로 학습 불가</li>
+        <li>Meta 알고리즘은 주 50전환 이상일 때 최적화가 작동. 소액 캠페인은 기계학습 진입 자체가 안 됨</li>
+      </ul>
+    </div>
+
+    <div class="alert alert-yellow">
+      <h3>③ 스케일 역효율</h3>
+      <ul>
+        <li>주간 예산 100만원+ 시 CPC 130~178원, 50만원 이하 시 40~78원</li>
+        <li>크리에이티브 풀 부족 또는 타겟 포화. 현재 구조로는 스케일업이 돈만 태우는 결과</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Action Plan -->
+  <div class="section">
+    <h2><span class="icon">→</span> 액션 플랜</h2>
+    
+    <div class="action-grid">
+      <div class="action-card" style="border-left: 3px solid var(--red);">
+        <h3>🔴 긴급 (이번 주)</h3>
+        <ul>
+          <li>연말커플경기, 썰릴스, 크리스마스공식, 친구소개팅, 커플찾기 → <strong>OFF</strong></li>
+          <li>과잠에셋 2개 예산 50% 감소 (173만→87만)</li>
+          <li>핸디X썸타임 2개 예산 30% 감소 (397만→278만)</li>
+        </ul>
+      </div>
+      <div class="action-card" style="border-left: 3px solid var(--yellow);">
+        <h3>🟡 단기 (2주 내)</h3>
+        <ul>
+          <li>절감분을 문화+로고, 연말커플에 재배분 (CPC 35~40원대)</li>
+          <li>Meta SDK / 앱 이벤트 연동 상태 확인</li>
+          <li>45세+ 타겟 제외 테스트</li>
+          <li>Facebook/Audience Network 게재위치 제외</li>
+        </ul>
+      </div>
+      <div class="action-card" style="border-left: 3px solid var(--green);">
+        <h3>🟢 중기 (1개월)</h3>
+        <ul>
+          <li>설치 최적화(AEO) 캠페인 신규 세팅</li>
+          <li>크리에이티브 3~5개 추가 제작 (스케일 시 효율 유지용)</li>
+          <li>25-34 타겟 전용 캠페인 분리 테스트</li>
+          <li>주간 예산 상한선 설정 (효율 급락 방지)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Weekly Spend Chart
+const weeklyLabels = ['12/25','1/1','1/8','1/15','1/22','1/29','2/5','2/12','2/19','2/26','3/5','3/12'];
+const weeklySpend = [698035,554159,1343679,1033577,537964,196396,302382,1208452,2147542,2959853,3319020,485729];
+const weeklyCTR = [4.47,4.77,3.50,3.36,4.72,6.44,5.60,4.26,3.28,3.20,3.77,6.02];
+const weeklyCPCLink = [66,57,130,129,78,40,73,160,177,178,174,124];
+
+new Chart(document.getElementById('weeklySpendChart'), {
+  type: 'bar',
+  data: {
+    labels: weeklyLabels,
+    datasets: [{
+      label: '주간 지출 (만원)',
+      data: weeklySpend.map(v => Math.round(v/10000)),
+      backgroundColor: 'rgba(129,140,248,0.6)',
+      borderRadius: 4,
+      yAxisID: 'y'
+    },{
+      label: 'CTR (%)',
+      data: weeklyCTR,
+      type: 'line',
+      borderColor: '#34d399',
+      backgroundColor: 'rgba(52,211,153,0.1)',
+      tension: 0.3,
+      pointRadius: 4,
+      yAxisID: 'y1'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } }, title: { display: true, text: '주간 지출 vs CTR', color: '#e4e4e7' } },
+    scales: {
+      x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2d3a' } },
+      y: { position: 'left', ticks: { color: '#9ca3af', callback: v=>v+'만' }, grid: { color: '#2a2d3a' } },
+      y1: { position: 'right', ticks: { color: '#34d399', callback: v=>v+'%' }, grid: { display: false }, min: 0, max: 8 }
+    }
+  }
+});
+
+new Chart(document.getElementById('weeklyCpcChart'), {
+  type: 'line',
+  data: {
+    labels: weeklyLabels,
+    datasets: [{
+      label: '링크클릭당 비용 (원)',
+      data: weeklyCPCLink,
+      borderColor: '#f87171',
+      backgroundColor: 'rgba(248,113,113,0.1)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } }, title: { display: true, text: '링크클릭당 비용 추이', color: '#e4e4e7' } },
+    scales: {
+      x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2d3a' } },
+      y: { ticks: { color: '#9ca3af', callback: v=>'₩'+v }, grid: { color: '#2a2d3a' } }
+    }
+  }
+});
+
+// Age/Gender Charts
+new Chart(document.getElementById('ageGenderChart'), {
+  type: 'bar',
+  data: {
+    labels: ['18-24','25-34','35-44','45-54','55-64','65+'],
+    datasets: [{
+      label: '남성 (노출)',
+      data: [1301140,722931,64918,26703,12345,20630],
+      backgroundColor: 'rgba(96,165,250,0.6)',
+      borderRadius: 4
+    },{
+      label: '여성 (노출)',
+      data: [807865,291987,22178,13218,4875,7491],
+      backgroundColor: 'rgba(244,114,182,0.6)',
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } }, title: { display: true, text: '연령/성별 노출 분포', color: '#e4e4e7' } },
+    scales: {
+      x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2d3a' }, stacked: true },
+      y: { ticks: { color: '#9ca3af', callback: v=>(v/10000).toFixed(0)+'만' }, grid: { color: '#2a2d3a' }, stacked: true }
+    }
+  }
+});
+
+new Chart(document.getElementById('ageCpcChart'), {
+  type: 'bar',
+  data: {
+    labels: ['18-24 M','18-24 F','25-34 M','25-34 F','35-44 M','35-44 F','45-54','55-64','65+'],
+    datasets: [{
+      label: 'CPC (원)',
+      data: [102,134,103,126,133,148,150,185,144],
+      backgroundColor: function(ctx) {
+        const v = ctx.raw;
+        if (v <= 110) return 'rgba(52,211,153,0.7)';
+        if (v <= 140) return 'rgba(96,165,250,0.7)';
+        if (v <= 170) return 'rgba(251,191,36,0.7)';
+        return 'rgba(248,113,113,0.7)';
+      },
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    indexAxis: 'y',
+    plugins: { legend: { display: false }, title: { display: true, text: '세그먼트별 CPC', color: '#e4e4e7' } },
+    scales: {
+      x: { ticks: { color: '#9ca3af', callback: v=>'₩'+v }, grid: { color: '#2a2d3a' } },
+      y: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2d3a' } }
+    }
+  }
+});
+
+// Platform Chart
+new Chart(document.getElementById('platformChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Instagram','Facebook','Audience Network'],
+    datasets: [{
+      data: [14738873, 47247, 668],
+      backgroundColor: ['rgba(129,140,248,0.8)','rgba(96,165,250,0.5)','rgba(107,114,128,0.3)'],
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#9ca3af' } },
+      title: { display: true, text: '플랫폼별 지출 비중', color: '#e4e4e7' }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
